@@ -14,7 +14,7 @@
 
   <script>
     const messages = document.getElementById("messages");
-    const ws = new WebSocket("ws://" + location.hostname + ":8765");
+    const ws = new WebSocket("ws://" + location.hostname + ":8765/?topic=room&id=1");
 
     ws.onmessage = (event) => {
       const div = document.createElement("div");

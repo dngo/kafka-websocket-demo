@@ -2,7 +2,7 @@ https://hub.docker.com/r/apache/kafka
 
 from directory containing docker-compose.yml:
 
-docker compose up -d
+docker compose up --build
 docker exec --workdir /opt/kafka/bin/ -it kafka sh
 ./kafka-topics.sh --bootstrap-server localhost:9092 --create --topic test-topic
 
