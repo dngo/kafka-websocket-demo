@@ -14,7 +14,7 @@ for i in range(10):
     try:
         kafka_consumer = Consumer({
             'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP", "localhost:9092"),
-            'group.id': 'web-group-1',
+            'group.id': 'web-group-2',
             'auto.offset.reset': 'latest'
         })
         print("✅ Kafka connected")
@@ -74,16 +74,16 @@ async def websocket_handler(websocket):
         print("🔌 WebSocket disconnected ", websocket.id, topic)
 
 async def index(request):
-    return web.FileResponse('./index.html')
+    return web.FileResponse('./index2.html')
 
 async def start_servers():
-    ws_server = websockets.serve(websocket_handler, '0.0.0.0', 8765)
+    ws_server = websockets.serve(websocket_handler, '0.0.0.0', 8766)
 
     app = web.Application()
     app.router.add_get('/', index)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    site = web.TCPSite(runner, '0.0.0.0', 8081)
 
     await asyncio.gather(ws_server, site.start(), kafka_listener())
 

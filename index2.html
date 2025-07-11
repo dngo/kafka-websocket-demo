@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kafka WebSocket Stream</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    #messages { background: #f0f0f0; padding: 1em; border-radius: 5px; }
+    .msg { margin-bottom: 0.5em; }
+  </style>
+</head>
+<body>
+  <h2> Kafka  WebSocket  2</h2>
+  <div id="messages"></div>
+
+  <script>
+    const messages = document.getElementById("messages");
+    const ws = new WebSocket("ws://" + location.hostname + ":8766/?topic=room&id=1");
+
+    ws.onmessage = (event) => {
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.textContent = " " + event.data;
+      messages.appendChild(div);
+    };
+  </script>
+</body>
+</html>
