@@ -9,19 +9,29 @@
   </style>
 </head>
 <body>
-  <h2> Kafka  WebSocket  2</h2>
+  <h2> Kafka  WebSocket 2</h2>
+  <input type="text" id="messageInput" placeholder="Enter message" />
+  <button onclick="sendMessage()">Send</button>
+
   <div id="messages"></div>
 
   <script>
-    const messages = document.getElementById("messages");
     const ws = new WebSocket("ws://" + location.hostname + ":8766/?topic=room&id=1");
 
+    const messages = document.getElementById("messages");
     ws.onmessage = (event) => {
       const div = document.createElement("div");
       div.className = "msg";
       div.textContent = " " + event.data;
       messages.appendChild(div);
     };
+
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const msg = input.value;
+      ws.send(msg);
+      input.value = "";
+    }
   </script>
 </body>
 </html>

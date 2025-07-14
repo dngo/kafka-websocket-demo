@@ -2,12 +2,22 @@ import asyncio
 import websockets
 import os
 from aiohttp import web
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer, Producer, KafkaException
 from urllib.parse import urlparse, parse_qs
 from collections import defaultdict
 
 TOPIC = "test-topic"
 websocket_connections = defaultdict(set)
+
+producer = Producer({
+    'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
+})
+
+def delivery_report(err, msg):
+    if err is not None:
+        print(f"❌ Delivery failed: {err}")
+    else:
+        print(f"✅ Message delivered to {msg.topic()} [{msg.partition()}]")
 
 # Retry Kafka consumer connection
 for i in range(10):
@@ -65,8 +75,9 @@ async def websocket_handler(websocket):
     print("🔌 WebSocket connected ", websocket.id, topic)
     try:
         await websocket.send('websocket connected' + websocket.request.path)
-        async for _ in websocket:
-            pass  # Handle messages here if needed
+        async for message in websocket:
+            producer.produce(topic, message.encode("utf-8"), callback=delivery_report)
+            producer.flush()
     except Exception as e:
         print(f"WebSocket error: {e}", websocket.id, topic)
     finally:
