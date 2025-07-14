@@ -1,41 +1,15 @@
 import asyncio
 import websockets
-import os
 from aiohttp import web
-from confluent_kafka import Consumer, Producer, KafkaException
 from urllib.parse import urlparse, parse_qs
 from collections import defaultdict
 
-TOPIC = "test-topic"
+from kafka.consumer import init_consumer, poll_message, subscribe_to_topic
+from kafka.producer import send_message
+
 websocket_connections = defaultdict(set)
 
-producer = Producer({
-    'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
-})
-
-def delivery_report(err, msg):
-    if err is not None:
-        print(f"❌ Delivery failed: {err}")
-    else:
-        print(f"✅ Message delivered to {msg.topic()} [{msg.partition()}]")
-
-# Retry Kafka consumer connection
-for i in range(10):
-    try:
-        kafka_consumer = Consumer({
-            'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP", "localhost:9092"),
-            'group.id': 'web-group-2',
-            'auto.offset.reset': 'latest'
-        })
-        print("✅ Kafka connected")
-        break
-    except KafkaException as e:
-        print(f"❌ Kafka connection failed: {e}. Retrying ({i+1}/10)...")
-        time.sleep(3)
-
-def update_kafka_subscription(topic):
-    kafka_consumer.subscribe([topic])
-    print(f"🔁 Subscribed to Kafka topics: {topic}")
+init_consumer(group_id="web-group-2")
 
 def get_topic(websocket):
     query_params = parse_qs(urlparse(websocket.request.path).query)
@@ -43,7 +17,7 @@ def get_topic(websocket):
 
 async def kafka_listener():
     while True:
-        msg = kafka_consumer.poll(1.0)
+        msg = poll_message()
         if msg is None:
             await asyncio.sleep(0.1)
             continue
@@ -51,7 +25,7 @@ async def kafka_listener():
             continue
 
         topic = msg.topic()
-        message = msg.value().decode('utf-8')
+        message = msg.value().decode("utf-8")
         print("📨 Kafka:", message)
 
         to_remove = set()
@@ -60,29 +34,28 @@ async def kafka_listener():
                 try:
                     await client.send(message)
                 except Exception as e:
-                    print(f" Failed to send to client: {e}")
+                    print(f"❌ Failed to send to client: {e}")
                     to_remove.add(client)
             else:
-                print("removing client due to close code")
                 to_remove.add(client)
         websocket_connections[topic].difference_update(to_remove)
 
 async def websocket_handler(websocket):
     topic = get_topic(websocket)
-    if topic not in websocket_connections: update_kafka_subscription(topic)
+    if topic not in websocket_connections:
+        subscribe_to_topic(topic)
     websocket_connections[topic].add(websocket)
 
-    print("🔌 WebSocket connected ", websocket.id, topic)
+    print("🔌 WebSocket connected", topic)
     try:
-        await websocket.send('websocket connected' + websocket.request.path)
+        await websocket.send('websocket connected ' + websocket.request.path)
         async for message in websocket:
-            producer.produce(topic, message.encode("utf-8"), callback=delivery_report)
-            producer.flush()
+            send_message(topic, message)
     except Exception as e:
-        print(f"WebSocket error: {e}", websocket.id, topic)
+        print(f"WebSocket error: {e}")
     finally:
         websocket_connections[topic].remove(websocket)
-        print("🔌 WebSocket disconnected ", websocket.id, topic)
+        print("🔌 WebSocket disconnected", topic)
 
 async def index(request):
     return web.FileResponse('./index2.html')
