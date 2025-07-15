@@ -6,3 +6,7 @@ pip install -r requirements.txt
 # from different terminals run
 python server1.py
 python server2.py
+
+
+# running tests
+python -m unittest kafka/test_consumer.py
